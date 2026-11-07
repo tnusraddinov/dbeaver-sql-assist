@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <!-- Modules 1 (cross-highlighting), 2 (vertical INSERT editor), 3 (live validation),
+        4 (inline column hints) and 5 (JSON / long text value editor). -->
+
+   <!-- ============================================================
+        Module 1 - Cross-highlighting (column <-> value) in INSERTs
+        ============================================================ -->
+
+   <!-- Attach the per-editor add-ons (Modules 1 and 3) to every SQL editor once the workbench is up. -->
+   <extension point="org.eclipse.ui.startup">
+      <startup class="com.sqlassist.dbeaver.ui.SqlAssistStartup"/>
+   </extension>
+
+   <!-- Annotation type used to paint the paired column / value. -->
+   <extension point="org.eclipse.ui.editors.annotationTypes">
+      <type name="com.sqlassist.dbeaver.crossHighlight"/>
+      <!-- Module 3: subtypes of the standard error/warning types, so "Next/Previous Annotation"
+           navigation and the overview ruler treat them like other problems. -->
+      <type name="com.sqlassist.dbeaver.validation.error" super="org.eclipse.ui.workbench.texteditor.error"/>
+      <type name="com.sqlassist.dbeaver.validation.warning" super="org.eclipse.ui.workbench.texteditor.warning"/>
+   </extension>
+
+   <!-- How the annotation looks. Users can change the color in
+        Window > Preferences > Editors > Text Editors > Annotations ("SQL Assist: INSERT pair"). -->
+   <extension point="org.eclipse.ui.editors.markerAnnotationSpecification">
+      <specification
+            annotationType="com.sqlassist.dbeaver.crossHighlight"
+            label="SQL Assist: INSERT column/value pair"
+            colorPreferenceKey="sqlassist.crossHighlight.color"
+            colorPreferenceValue="255,226,130"
+            highlightPreferenceKey="sqlassist.crossHighlight.highlight"
+            highlightPreferenceValue="true"
+            textPreferenceKey="sqlassist.crossHighlight.text"
+            textPreferenceValue="false"
+            overviewRulerPreferenceKey="sqlassist.crossHighlight.overview"
+            overviewRulerPreferenceValue="true"
+            verticalRulerPreferenceKey="sqlassist.crossHighlight.vertical"
+            verticalRulerPreferenceValue="false"
+            showInNextPrevDropdownToolbarActionKey="sqlassist.crossHighlight.nextPrev"
+            showInNextPrevDropdownToolbarAction="false"
+            includeOnPreferencePage="true"
+            presentationLayer="4"/>
+      <specification
+            annotationType="com.sqlassist.dbeaver.validation.error"
+            label="SQL Assist: INSERT validation error"
+            symbolicIcon="error"
+            colorPreferenceKey="sqlassist.validation.error.color"
+            colorPreferenceValue="230,50,50"
+            textPreferenceKey="sqlassist.validation.error.text"
+            textPreferenceValue="true"
+            textStylePreferenceKey="sqlassist.validation.error.textStyle"
+            textStylePreferenceValue="SQUIGGLES"
+            highlightPreferenceKey="sqlassist.validation.error.highlight"
+            highlightPreferenceValue="false"
+            overviewRulerPreferenceKey="sqlassist.validation.error.overview"
+            overviewRulerPreferenceValue="true"
+            verticalRulerPreferenceKey="sqlassist.validation.error.vertical"
+            verticalRulerPreferenceValue="true"
+            includeOnPreferencePage="true"
+            presentationLayer="6"/>
+      <specification
+            annotationType="com.sqlassist.dbeaver.validation.warning"
+            label="SQL Assist: INSERT validation warning"
+            symbolicIcon="warning"
+            colorPreferenceKey="sqlassist.validation.warning.color"
+            colorPreferenceValue="230,160,0"
+            textPreferenceKey="sqlassist.validation.warning.text"
+            textPreferenceValue="true"
+            textStylePreferenceKey="sqlassist.validation.warning.textStyle"
+            textStylePreferenceValue="SQUIGGLES"
+            highlightPreferenceKey="sqlassist.validation.warning.highlight"
+            highlightPreferenceValue="false"
+            overviewRulerPreferenceKey="sqlassist.validation.warning.overview"
+            overviewRulerPreferenceValue="true"
+            verticalRulerPreferenceKey="sqlassist.validation.warning.vertical"
+            verticalRulerPreferenceValue="true"
+            includeOnPreferencePage="true"
+            presentationLayer="5"/>
+   </extension>
+
+   <!-- Command: move the selection to the counterpart (column -> value, value -> column). -->
+   <extension point="org.eclipse.ui.commands">
+      <category id="com.sqlassist.dbeaver.category" name="SQL Assist"/>
+      <command
+            id="com.sqlassist.dbeaver.selectCounterpart"
+            categoryId="com.sqlassist.dbeaver.category"
+            name="Select INSERT Column/Value Counterpart"
+            description="Selects the VALUES item matching the column under the caret, or the column matching the value."/>
+      <command
+            id="com.sqlassist.dbeaver.verticalInsert"
+            categoryId="com.sqlassist.dbeaver.category"
+            name="Edit INSERT Vertically"
+            description="Shows the INSERT under the caret as a column/value grid and writes edits back to the script."/>
+      <command
+            id="com.sqlassist.dbeaver.toggleColumnHints"
+            categoryId="com.sqlassist.dbeaver.category"
+            name="Toggle INSERT Column Hints"
+            description="Shows or hides the inline column name/type hints before INSERT values."/>
+      <command
+            id="com.sqlassist.dbeaver.editValue"
+            categoryId="com.sqlassist.dbeaver.category"
+            name="Edit String Value"
+            description="Opens the INSERT string value under the caret in a JSON/XML/text editor."/>
+   </extension>
+
+   <!-- Module 4: inline "name (type):" hints before VALUES items. DBeaver's editor installs
+        registered code-mining providers itself; the expression limits this one to SQL editors. -->
+   <extension point="org.eclipse.ui.workbench.texteditor.codeMiningProviders">
+      <codeMiningProvider
+            id="com.sqlassist.dbeaver.columnHints"
+            class="com.sqlassist.dbeaver.ui.hints.ColumnHintProvider"
+            label="SQL Assist: INSERT column hints">
+         <enabledWhen>
+            <with variable="editor">
+               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase"/>
+            </with>
+         </enabledWhen>
+      </codeMiningProvider>
+      <!-- Module 5: clickable "✎ JSON" link after long string values. -->
+      <codeMiningProvider
+            id="com.sqlassist.dbeaver.valueEditorLinks"
+            class="com.sqlassist.dbeaver.ui.values.ValueEditorProvider"
+            label="SQL Assist: value editor links">
+         <enabledWhen>
+            <with variable="editor">
+               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase"/>
+            </with>
+         </enabledWhen>
+      </codeMiningProvider>
+   </extension>
+
+   <extension point="org.eclipse.ui.handlers">
+      <handler
+            commandId="com.sqlassist.dbeaver.selectCounterpart"
+            class="com.sqlassist.dbeaver.ui.handlers.SelectCounterpartHandler">
+         <enabledWhen>
+            <with variable="activeEditor">
+               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase"/>
+            </with>
+         </enabledWhen>
+      </handler>
+      <handler
+            commandId="com.sqlassist.dbeaver.editValue"
+            class="com.sqlassist.dbeaver.ui.handlers.EditValueHandler">
+         <enabledWhen>
+            <with variable="activeEditor">
+               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase"/>
+            </with>
+         </enabledWhen>
+      </handler>
+      <handler
+            commandId="com.sqlassist.dbeaver.toggleColumnHints"
+            class="com.sqlassist.dbeaver.ui.handlers.ToggleColumnHintsHandler"/>
+      <handler
+            commandId="com.sqlassist.dbeaver.verticalInsert"
+            class="com.sqlassist.dbeaver.ui.handlers.OpenVerticalViewHandler">
+         <enabledWhen>
+            <with variable="activeEditor">
+               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase"/>
+            </with>
+         </enabledWhen>
+      </handler>
+   </extension>
+
+   <!-- Shift+Alt+J / V / E (Shift+Option on macOS), only inside the SQL editor.
+        Ctrl+Shift+V is avoided: DBeaver binds it globally to Paste Special. -->
+   <extension point="org.eclipse.ui.bindings">
+      <key
+            commandId="com.sqlassist.dbeaver.selectCounterpart"
+            contextId="org.jkiss.dbeaver.ui.editors.sql"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M2+M3+J"/>
+      <key
+            commandId="com.sqlassist.dbeaver.verticalInsert"
+            contextId="org.jkiss.dbeaver.ui.editors.sql"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M2+M3+V"/>
+      <key
+            commandId="com.sqlassist.dbeaver.editValue"
+            contextId="org.jkiss.dbeaver.ui.editors.sql"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M2+M3+E"/>
+   </extension>
+
+   <!-- SQL editor right-click menu. -->
+   <extension point="org.eclipse.ui.menus">
+      <menuContribution
+            allPopups="false"
+            locationURI="popup:org.jkiss.dbeaver.ui.editors.sql.SQLEditor.EditorContext?after=sql.extras">
+         <command
+               commandId="com.sqlassist.dbeaver.selectCounterpart"
+               label="Select Column/Value Counterpart"
+               style="push"/>
+         <command
+               commandId="com.sqlassist.dbeaver.verticalInsert"
+               label="Edit INSERT Vertically..."
+               style="push"/>
+         <command
+               commandId="com.sqlassist.dbeaver.editValue"
+               label="Edit String Value..."
+               style="push"/>
+         <command
+               commandId="com.sqlassist.dbeaver.toggleColumnHints"
+               label="Toggle INSERT Column Hints"
+               style="push"/>
+      </menuContribution>
+   </extension>
+
+</plugin>
