@@ -1,7 +1,7 @@
 # SQL Assist for DBeaver
 
-A DBeaver plugin that makes long `INSERT` statements easy to read, edit and check, inspired by
-the INSERT editing features of JetBrains DataGrip / IntelliJ.
+A DBeaver plugin that makes long `INSERT` statements easy to read, edit and check, and formats SQL,
+inspired by JetBrains DataGrip / IntelliJ.
 
 | Feature | What it does |
 |---|---|
@@ -10,6 +10,7 @@ the INSERT editing features of JetBrains DataGrip / IntelliJ.
 | **Live type and constraint checks** | Underlines values that don't fit the connected table: wrong types, `NULL` in `NOT NULL` columns, too-long strings, unknown columns. |
 | **Inline column hints** | Faint `name (varchar(50)):` labels in front of each value, so you never count commas again. |
 | **JSON / XML / long text editor** | A `✎ JSON` link after long values opens them formatted, with validation, and writes them back correctly quoted. |
+| **SQL formatter** | DataGrip-style formatting of the selection, or the whole script when nothing is selected. Only whitespace and keyword case change. |
 
 Tested with **DBeaver 26.2.3** (Community, Java 21) on macOS.
 
@@ -86,6 +87,7 @@ editor's right-click menu.
 | Shift+Alt+J | Select Column/Value Counterpart |
 | Shift+Alt+V | Edit INSERT Vertically… |
 | Shift+Alt+E | Edit String Value… |
+| Cmd+Alt+L (macOS) / Ctrl+Alt+L | Format SQL (SQL Assist) |
 | (menu only) | Toggle INSERT Column Hints |
 
 Shortcuts can be changed in DBeaver's preferences (*Window → Preferences*, on macOS *DBeaver → Settings*)
@@ -176,6 +178,60 @@ cursor on any string value and press **Shift+Alt+E**.
   compact and the INSERT keeps one row per line.
 - Applying without changes leaves the script untouched; one undo reverts an applied change.
 - The XML parser refuses DTDs and external entities (no XXE).
+
+### 6. SQL formatter
+
+**Cmd+Option+L** on macOS or **Ctrl+Alt+L** elsewhere (DataGrip's *Reformat Code* shortcut) formats the
+selected lines, or the whole script when nothing is selected:
+
+```sql
+SELECT u.id,
+       u.name,
+       count(*) AS orders
+FROM users u
+LEFT JOIN orders o ON o.user_id = u.id
+WHERE u.active = TRUE
+  AND o.total > 10
+GROUP BY u.id, u.name
+ORDER BY orders DESC;
+
+INSERT INTO users (id, name)
+VALUES (1, 'a'),
+       (2, 'b');
+```
+
+- One clause per line; SELECT, SET and VALUES lists are aligned; AND/OR line up under WHERE/HAVING;
+  subqueries and CTEs get their own indented block; `CASE` is split into WHEN/ELSE lines;
+  `CREATE TABLE` gets one column per line.
+- Lines are kept within 120 characters, like DataGrip: a column list, VALUES row, `IN (…)` list,
+  function call or GROUP BY / ORDER BY list that would cross the margin is wrapped after a comma, with
+  the continuation aligned under the first item:
+
+  ```sql
+  INSERT INTO customer_orders (order_id, customer_id, order_date, shipping_address, billing_address, total_amount,
+                               currency_code, status, created_at)
+  VALUES (100245, 5021, '2026-11-07', 'Ataturk Cad. No: 15 Kadikoy Istanbul', 'Ataturk Cad. No: 15 Kadikoy Istanbul',
+          1499.90, 'TRY', 'PENDING', now());
+  ```
+
+  A single value longer than the margin (a long string, for example) stays on its line.
+- **It is safe by design:** only whitespace and the case of reserved keywords change. The result is
+  checked token by token against the original, and if anything else would differ, nothing is applied.
+  Operators written without spaces (`::`, `>=`, `->>`) stay intact, and strings, comments and quoted
+  names are never touched.
+- Keyword case follows DBeaver's *Keyword case* setting (upper, lower, or mixed = leave as typed). Only
+  words that are reserved in every major database are re-cased, so table names and aliases keep their
+  case.
+- Blank lines between statements are kept, so DBeaver's "blank line is a statement delimiter" option
+  keeps working. DBeaver commands such as `@set` and `@include`, `GO` and `DELIMITER` lines are left as
+  they are.
+- Only SELECT, WITH, INSERT, UPDATE, DELETE, VALUES, CREATE TABLE and CREATE VIEW statements are
+  reformatted. Other statements (functions, procedures, ALTER, MERGE, …) are left exactly as written.
+- The caret stays on the same piece of SQL, a selection stays selected, and one undo reverts the change.
+
+The formatter can also replace DBeaver's own: choose **SQL Assist (DataGrip style)** under
+*Editors → SQL Editor → Formatting* in DBeaver's preferences, and DBeaver's *Format SQL*
+(Ctrl+Shift+F) uses it.
 
 ### Appearance
 

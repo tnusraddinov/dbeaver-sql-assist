@@ -1,7 +1,7 @@
 package com.sqlassist.dbeaver.parser;
 
 /**
- * Lexical token. Comments and whitespace are never emitted.
+ * Lexical token. Whitespace is never emitted; comments only on request.
  */
 public record SqlToken(Type type, int start, int end, String text) {
 
@@ -15,6 +15,7 @@ public record SqlToken(Type type, int start, int end, String text) {
         COMMA,
         SEMICOLON,
         DOT,
+        COMMENT,       // only with SqlTokenizer.tokenizeWithComments: -- line or /* block */
         OTHER          // operators and anything else
     }
 
@@ -24,6 +25,10 @@ public record SqlToken(Type type, int start, int end, String text) {
 
     public boolean isIdentifier() {
         return type == Type.WORD || type == Type.QUOTED_IDENT;
+    }
+
+    public boolean isLineComment() {
+        return type == Type.COMMENT && text.startsWith("--");
     }
 
     public Span span() {

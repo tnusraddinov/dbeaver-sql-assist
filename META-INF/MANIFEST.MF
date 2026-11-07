@@ -35,5 +35,6 @@ Export-Package: com.sqlassist.dbeaver.parser,
  com.sqlassist.dbeaver.vertical,
  com.sqlassist.dbeaver.validation,
  com.sqlassist.dbeaver.hints,
- com.sqlassist.dbeaver.values
+ com.sqlassist.dbeaver.values,
+ com.sqlassist.dbeaver.format
 Automatic-Module-Name: com.sqlassist.dbeaver

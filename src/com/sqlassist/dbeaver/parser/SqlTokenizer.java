@@ -13,12 +13,15 @@ public final class SqlTokenizer {
 
     private final CharSequence text;
     private final int limit;
+    private final boolean keepComments;
+    private final List<SqlToken> tokens = new ArrayList<>();
     private int pos;
 
-    private SqlTokenizer(CharSequence text, int from, int to) {
+    private SqlTokenizer(CharSequence text, int from, int to, boolean keepComments) {
         this.text = text;
         this.pos = from;
         this.limit = to;
+        this.keepComments = keepComments;
     }
 
     public static List<SqlToken> tokenize(CharSequence text) {
@@ -26,11 +29,15 @@ public final class SqlTokenizer {
     }
 
     public static List<SqlToken> tokenize(CharSequence text, int from, int to) {
-        return new SqlTokenizer(text, from, to).run();
+        return new SqlTokenizer(text, from, to, false).run();
+    }
+
+    /** Like {@link #tokenize(CharSequence)} but also emits {@link SqlToken.Type#COMMENT} tokens. */
+    public static List<SqlToken> tokenizeWithComments(CharSequence text) {
+        return new SqlTokenizer(text, 0, text.length(), true).run();
     }
 
     private List<SqlToken> run() {
-        List<SqlToken> tokens = new ArrayList<>();
         while (pos < limit) {
             char c = text.charAt(pos);
             if (Character.isWhitespace(c)) {
@@ -79,17 +86,25 @@ public final class SqlTokenizer {
     }
 
     private void skipLineComment() {
-        while (pos < limit && text.charAt(pos) != '\n') {
+        int start = pos;
+        while (pos < limit && text.charAt(pos) != '\n' && text.charAt(pos) != '\r') {
             pos++;
+        }
+        if (keepComments) {
+            tokens.add(token(SqlToken.Type.COMMENT, start));
         }
     }
 
     private void skipBlockComment() {
+        int start = pos;
         pos += 2;
         while (pos < limit && !(text.charAt(pos) == '*' && peek(1) == '/')) {
             pos++;
         }
         pos = Math.min(limit, pos + 2);
+        if (keepComments) {
+            tokens.add(token(SqlToken.Type.COMMENT, start));
+        }
     }
 
     private SqlToken quoted(SqlToken.Type type, int start, char quote) {

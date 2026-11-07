@@ -3,7 +3,17 @@
 <plugin>
 
    <!-- Modules 1 (cross-highlighting), 2 (vertical INSERT editor), 3 (live validation),
-        4 (inline column hints) and 5 (JSON / long text value editor). -->
+        4 (inline column hints), 5 (JSON / long text value editor) and the SQL formatter. -->
+
+   <!-- SQL formatter: selectable in DBeaver's SQL formatting preferences, so DBeaver's own
+        Format SQL (Ctrl+Shift+F) can use it too. -->
+   <extension point="org.jkiss.dbeaver.sqlFormatter">
+      <formatter
+            id="sqlassist"
+            class="com.sqlassist.dbeaver.ui.format.DataGripStyleFormatter"
+            label="SQL Assist (DataGrip style)"
+            description="Clause per line, aligned select lists and VALUES rows, AND/OR aligned under WHERE. Only whitespace and keyword case change."/>
+   </extension>
 
    <!-- ============================================================
         Module 1 - Cross-highlighting (column <-> value) in INSERTs
@@ -104,6 +114,11 @@
             categoryId="com.sqlassist.dbeaver.category"
             name="Edit String Value"
             description="Opens the INSERT string value under the caret in a JSON/XML/text editor."/>
+      <command
+            id="com.sqlassist.dbeaver.formatSql"
+            categoryId="com.sqlassist.dbeaver.category"
+            name="Format SQL (SQL Assist)"
+            description="Formats the selected lines, or the whole script when nothing is selected, in DataGrip style."/>
    </extension>
 
    <!-- Module 4: inline "name (type):" hints before VALUES items. DBeaver's editor installs
@@ -136,6 +151,15 @@
       <handler
             commandId="com.sqlassist.dbeaver.selectCounterpart"
             class="com.sqlassist.dbeaver.ui.handlers.SelectCounterpartHandler">
+         <enabledWhen>
+            <with variable="activeEditor">
+               <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase"/>
+            </with>
+         </enabledWhen>
+      </handler>
+      <handler
+            commandId="com.sqlassist.dbeaver.formatSql"
+            class="com.sqlassist.dbeaver.ui.handlers.FormatSqlHandler">
          <enabledWhen>
             <with variable="activeEditor">
                <instanceof value="org.jkiss.dbeaver.ui.editors.sql.SQLEditorBase"/>
@@ -183,6 +207,12 @@
             contextId="org.jkiss.dbeaver.ui.editors.sql"
             schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
             sequence="M2+M3+E"/>
+      <!-- DataGrip's Reformat Code shortcut: Cmd+Option+L on macOS, Ctrl+Alt+L elsewhere. -->
+      <key
+            commandId="com.sqlassist.dbeaver.formatSql"
+            contextId="org.jkiss.dbeaver.ui.editors.sql"
+            schemeId="org.eclipse.ui.defaultAcceleratorConfiguration"
+            sequence="M1+M3+L"/>
    </extension>
 
    <!-- SQL editor right-click menu. -->
@@ -201,6 +231,10 @@
          <command
                commandId="com.sqlassist.dbeaver.editValue"
                label="Edit String Value..."
+               style="push"/>
+         <command
+               commandId="com.sqlassist.dbeaver.formatSql"
+               label="Format SQL (SQL Assist)"
                style="push"/>
          <command
                commandId="com.sqlassist.dbeaver.toggleColumnHints"

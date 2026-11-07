@@ -32,6 +32,9 @@ src/com/sqlassist/dbeaver/
     TableMeta, ColumnMeta, Problem
   hints/                      feature 4
     ColumnHints               computes the "name (type): " labels
+  format/                     SQL formatter
+    SqlFormatter              DataGrip-style layout engine + token-by-token safety check
+    Keywords                  words whose case may change (reserved in every major database)
   values/                     feature 5
     StringLiteral             'x' / N'x' / E'x' / $$x$$ <-> plain content, same quoting on write-back
     JsonFormatter             dependency-free JSON validation, pretty-printing and minifying
@@ -44,6 +47,7 @@ src/com/sqlassist/dbeaver/
     validation/               feature 3: LiveValidator, TableMetadataResolver, ValidationAnnotation
     hints/                    feature 4: ColumnHintProvider, ColumnHintMining, ColumnHintUpdater, HintPreferences
     values/                   feature 5: ValueEditorDialog, ValueEditorProvider, ValueEditing
+    format/                   formatter: DataGripStyleFormatter (DBeaver sqlFormatter extension), options
     handlers/                 command handlers for the menu entries and shortcuts
 test/                         dependency-free tests (each *Test class has a main method; build.sh runs all)
 ```
@@ -114,6 +118,42 @@ still points at the value's end when clicked. `StringLiteral` separates quoting 
 re-quotes edited content in the original style. `JsonFormatter` copies strings and numbers verbatim,
 so formatting never changes values or precision.
 
+### 6. Formatter
+
+`SqlFormatter` works on the token stream including comments. The script is cut into units: a
+statement ends at a depth-0 `;` (plus comments on the same line), before a blank line, or before a
+DBeaver command line (`@set`, `@include`, …, `GO`, `DELIMITER`). Units whose first word is not a
+supported statement, or whose parentheses are unbalanced, are copied verbatim.
+
+Supported statements are laid out by a small state machine: clause keywords (including multi-word ones
+such as `GROUP BY`, `LEFT OUTER JOIN`, `ON CONFLICT`, `UNION ALL`) start a line at the statement's
+indent; commas in SELECT / SET / VALUES lists break and align to the first item; AND/OR at depth 0 in
+WHERE / HAVING break and align under the clause keyword (`BETWEEN … AND` excepted); parentheses that
+contain a query become indented blocks, other parentheses stay inline; `CASE` puts WHEN / ELSE / END
+on their own lines.
+
+Lines are wrapped at a right margin (`Options.lineWidth`, 120 by default, 0 = off). Before each
+item of a comma list (inside parentheses, or GROUP BY / ORDER BY / FROM / RETURNING at clause level)
+the item's one-line width is measured; if it would cross the margin, the line breaks after the comma
+and continues at the column of the list's first item. When that column is beyond two thirds of the
+margin, the continuation falls back to the line's indent plus two indent steps. A subquery counts only
+up to its `(`, because it becomes its own block. Wrapping only ever adds line breaks after commas, so
+the safety rules below are unaffected.
+
+Two rules keep it safe:
+
+1. **Spacing never joins or splits tokens.** Two tokens that touched in the input still touch; a space
+   is only added after a comma and only removed next to `( ) , ; .`. So `::`, `>=` or `->>`, which the
+   tokenizer sees as separate characters, cannot be torn apart.
+2. **Verification.** The output is tokenized again and compared with the input: same number of tokens,
+   same types, same text except the case of words in `Keywords`. Any difference throws
+   `SqlFormatException` and the editor is left unchanged.
+
+`Result.mapOffset` maps the caret through the per-token output offsets, and `FormatSqlHandler`
+replaces only the differing middle part of the text so markers elsewhere stay put.
+`DataGripStyleFormatter` exposes the same engine through DBeaver's `org.jkiss.dbeaver.sqlFormatter`
+extension point; on a failed check it returns the input unchanged.
+
 ## Installing without dropins
 
 DBeaver ships the Eclipse p2 dropins reconciler disabled (`bundles.info` marks it as not started), so
@@ -143,3 +183,5 @@ each feature.
 8. `INSERT INTO t (id, data) VALUES (1, '{"a": 1, "b": [1, 2, 3], "c": "a longer value"}');` shows a
    `✎ JSON` link. It opens formatted JSON; after an edit, *Apply to Script* writes it back on one line
    with correct quoting.
+9. With nothing selected, Cmd+Option+L / Ctrl+Alt+L formats the whole script; with a selection,
+   only the selected lines. One undo reverts it.
