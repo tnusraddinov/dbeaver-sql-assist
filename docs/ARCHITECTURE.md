@@ -15,7 +15,8 @@ SQL Assist is a single OSGi bundle (`com.sqlassist.dbeaver`) that plugs into DBe
 META-INF/MANIFEST.MF          OSGi bundle definition (requires DBeaver SQL editor + JFace Text)
 plugin.xml                    startup hook, annotation types, code-mining providers, commands, keys, menus
 build.properties              PDE build metadata
-build.sh                      dependency-free build, tests, packaging and (un)install
+build.sh                      dependency-free build, tests and packaging; install / uninstall
+scripts/install.sh            standalone installer, also shipped with each release
 src/com/sqlassist/dbeaver/
   parser/                     tokenizer and INSERT parser (used by every feature)
     SqlTokenizer              lexer aware of strings, quoted identifiers, comments, $$...$$ blocks
@@ -116,7 +117,8 @@ so formatting never changes values or precision.
 ## Installing without dropins
 
 DBeaver ships the Eclipse p2 dropins reconciler disabled (`bundles.info` marks it as not started), so
-`dropins/` is ignored. `build.sh install` copies the jar to `plugins/` and appends a line to
+`dropins/` is ignored. `scripts/install.sh` (also used by `build.sh install`) copies the jar to
+`plugins/` and appends a line to
 `configuration/org.eclipse.equinox.simpleconfigurator/bundles.info`. Equinox's simple configurator
 installs it at the next start.
 

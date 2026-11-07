@@ -15,8 +15,51 @@ Tested with **DBeaver 26.2.3** (Community, Java 21) on macOS.
 
 ## Installation
 
-There is no prebuilt release yet: you build the plugin against your own DBeaver installation.
-You only need a JDK 21+; Maven, Tycho and Eclipse are not required.
+DBeaver ships with the Eclipse dropins scanner disabled, so the jar can't simply be dropped into
+`dropins/`. The install script copies it to DBeaver's `plugins/` folder and registers it in
+`configuration/org.eclipse.equinox.simpleconfigurator/bundles.info`, keeping a backup of the original
+file as `bundles.info.sqlassist-backup`.
+
+**A DBeaver update replaces `bundles.info`**, which removes the plugin: run the install again after
+updating DBeaver.
+
+### From a release (recommended)
+
+1. Download `com.sqlassist.dbeaver_<version>.jar` and `install.sh` from the
+   [latest release](https://github.com/tnusraddinov/dbeaver-sql-assist/releases/latest).
+2. Quit DBeaver.
+3. Run:
+
+   ```bash
+   bash install.sh com.sqlassist.dbeaver_<version>.jar
+   ```
+
+4. Start DBeaver.
+
+The script finds DBeaver in the default locations on macOS (`/Applications/DBeaver.app`), Linux
+(`/usr/share/dbeaver-ce`, `/opt/dbeaver`) and Windows with Git Bash (`C:\Program Files\DBeaver`).
+Otherwise set `DBEAVER_HOME` to the folder that contains `plugins/` and `configuration/`:
+
+```bash
+DBEAVER_HOME=/path/to/dbeaver bash install.sh com.sqlassist.dbeaver_<version>.jar
+```
+
+If DBeaver is installed system-wide, the script may need `sudo`. Snap and Flatpak installations are
+read-only and not supported.
+
+To remove the plugin: `bash install.sh --uninstall`, then restart DBeaver.
+
+**Manual install (any OS):** copy the jar into DBeaver's `plugins/` folder and add this line to the
+end of `configuration/org.eclipse.equinox.simpleconfigurator/bundles.info`, using the jar's version:
+
+```text
+com.sqlassist.dbeaver,<version>,plugins/com.sqlassist.dbeaver_<version>.jar,4,true
+```
+
+### From source
+
+You need a JDK 21+ and a local DBeaver installation to compile against; Maven, Tycho and Eclipse are
+not required.
 
 ```bash
 git clone https://github.com/tnusraddinov/dbeaver-sql-assist.git
@@ -24,28 +67,14 @@ cd dbeaver-sql-assist
 ./build.sh install
 ```
 
-Then quit DBeaver completely (Cmd+Q on macOS) and start it again.
-
 | Command | Effect |
 |---|---|
 | `./build.sh` | Compiles, runs the tests, writes the plugin jar to `dist/` |
 | `./build.sh install` | Same, then installs the jar into DBeaver |
 | `./build.sh uninstall` | Removes the plugin from DBeaver |
 
-`build.sh` looks for DBeaver in `/Applications/DBeaver.app/Contents/Eclipse` (the macOS default).
-For another location, point `DBEAVER_HOME` at the folder that contains `plugins/` and `configuration/`:
-
-```bash
-DBEAVER_HOME=/opt/dbeaver ./build.sh install
-```
-
-On Windows, run the script from Git Bash or WSL.
-
-**Why not the `dropins/` folder?** DBeaver ships with the Eclipse dropins scanner disabled, so jars
-placed there are ignored. `install` copies the jar to `plugins/` and registers it in
-`configuration/org.eclipse.equinox.simpleconfigurator/bundles.info`, keeping a backup of the original
-file as `bundles.info.sqlassist-backup`. **A DBeaver update replaces that file**, so run
-`./build.sh install` again after updating DBeaver.
+`build.sh` compiles against `/Applications/DBeaver.app/Contents/Eclipse` by default; set
+`DBEAVER_HOME` for other locations. On Windows, run it from Git Bash or WSL.
 
 ## Usage
 
