@@ -16,7 +16,9 @@ DBEAVER_HOME="${DBEAVER_HOME:-/Applications/DBeaver.app/Contents/Eclipse}"
 PLUGINS="$DBEAVER_HOME/plugins"
 [[ -d "$PLUGINS" ]] || { echo "DBeaver plugins not found at $PLUGINS (set DBEAVER_HOME)"; exit 1; }
 
-VERSION="${VERSION:-0.1.0.$(date +%Y%m%d%H%M)}"
+# Base version comes from META-INF/MANIFEST.MF (Bundle-Version: X.Y.Z.qualifier).
+BASE_VERSION="$(sed -n 's/^Bundle-Version: \([0-9]*\.[0-9]*\.[0-9]*\)\.qualifier.*/\1/p' META-INF/MANIFEST.MF)"
+VERSION="${VERSION:-$BASE_VERSION.$(date +%Y%m%d%H%M)}"
 BUNDLE="com.sqlassist.dbeaver_${VERSION}.jar"
 CP=$(find "$PLUGINS" -maxdepth 1 -name '*.jar' | tr '\n' ':')
 
@@ -32,7 +34,7 @@ for t in $(cd test && find . -name '*Test.java' | sed 's|^\./||; s|\.java$||; s|
 done
 
 echo "==> Packaging $BUNDLE"
-sed "s/0\.1\.0\.qualifier/$VERSION/" META-INF/MANIFEST.MF > build/MANIFEST.MF
+sed "s/^Bundle-Version: .*/Bundle-Version: $VERSION/" META-INF/MANIFEST.MF > build/MANIFEST.MF
 cp plugin.xml LICENSE build/classes/
 jar --create --file "dist/$BUNDLE" --manifest build/MANIFEST.MF -C build/classes .
 
